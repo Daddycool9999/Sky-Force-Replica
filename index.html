@@ -1,0 +1,889 @@
+<html>
+    
+    <head>
+        <title>WarFWhiskey</title>
+        <style>
+            body{margin: 0;}
+            canvas{width: 100%;height:100%; }
+        </style>
+    </head>
+    <body>
+        <script src="js/three.js"></script>
+        <script src="js/PointerLockControls.js"></script>
+        <script src="js/GLTFLoader.js"></script>
+        <script>
+            var scene,camera,renderer,controls;
+            
+            var moveForward=false,moveBackward=false,moveLeft=false,moveRight=false,bullet=false;
+            const cameraspeed=0.02;
+            const herospeed=0.08;
+            const villanspeed=0.05;
+            const bulletspeed=0.2;
+            var bullets=[],enemy=[],stars=[],bulletrev=[];
+            var occupied=[];
+            var vFOV,Height,Width;
+            var Life=100;
+            var enemylane=new Set;
+            var coinlane=new Set;
+            var coins=0;
+            var hero;
+            var bossenemy;
+            var bosslife=500;
+            const loader = new THREE.GLTFLoader();
+
+            scene=new THREE.Scene();
+            camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+
+            renderer=new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth,window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            const loadert = new THREE.TextureLoader();
+            loadert.load('./img/back2.jpg' , function(texture)
+            {
+             scene.background = texture;  
+            });
+
+            window.addEventListener('resize', ()=>{
+                var width=window.innerWidth;
+                var height=window.innerHeight;
+                renderer.setSize(width,height);
+                camera.aspect=width/height;
+                camera.updateProjectionMatrix();
+            });
+            camera.position.z=10;
+            var ambientLight = new THREE.AmbientLight( 0xffffff, 1.0 );
+            scene.add(ambientLight);
+
+            vFOV = THREE.MathUtils.degToRad( camera.fov ); // convert vertical fov to radians
+
+            Height = 2 * Math.tan( vFOV / 2 ) * camera.position.z; // visible Height
+
+            Width = Height * camera.aspect;           // visible Width
+
+            Width=Math.floor(Width);
+            Height=Math.floor(Height);
+
+
+            
+            
+            
+            var HUD = document.createElement('div');
+            HUD.style.position = 'absolute';
+            //HUD.style.zIndex = 1;    // if you still don't see the label, try uncommenting this
+            HUD.style.width = 100;
+            HUD.style.height = 100;
+            // HUD.style.backgroundColor = "blue";
+            HUD.innerHTML = "LIFE:100 POINTS:0";
+            
+            HUD.style.top = 20 + 'px';
+            HUD.style.left = 20 + 'px';
+            HUD.style.color='#FFFFFF';
+            HUD.style.fontSize=20;
+            
+            var HUD1 = document.createElement('div');
+            HUD1.style.position = 'absolute';
+            //HUD1.style.zIndex = 1;    // if you still don't see the label, try uncommenting this
+            HUD1.style.width = 100;
+            HUD1.style.height = 100;;
+            HUD1.innerHTML="BOSSLIFE:500";
+            HUD1.style.top = 20 + 'px';
+            HUD1.style.right = 50 + 'px';
+            HUD1.style.color='#FFFFFF';
+            HUD1.style.fontSize=20;
+
+            const precision=0.0001;
+            var battle=false;
+
+            var show=function(){
+
+                document.body.appendChild(HUD1);
+                battle=true;
+            };
+
+
+
+            var update=function(){
+                
+                
+                
+
+                var top=camera.position.y+Math.floor(Height/2);
+                
+                var left=camera.position.x-Math.floor(Width/2);
+                var bullrem=[],enemrem=[],bullrevrem=[],coinrem=[];
+
+
+
+                if(top-Height<103)
+                camera.position.y+=cameraspeed;
+
+                for(i=0;i<enemy.length;i++){
+                    if((hero.position.x-0.5>=enemy[i].position.x-0.5 && hero.position.x-0.5<=enemy[i].position.x+0.5)||(hero.position.x+0.5>=enemy[i].position.x-0.5 && hero.position.x+0.5<=enemy[i].position.x+0.5)){
+                        if((hero.position.y-0.5>=enemy[i].position.y-0.5 && hero.position.y-0.5<=enemy[i].position.y+0.5)||(hero.position.y+0.5>=enemy[i].position.y-0.5 && hero.position.y+0.5<=enemy[i].position.y+0.5)){
+                            enemrem.push(enemy[i]);
+                            
+                            Life=Math.max(Life-10,0);
+                        }
+                    }                        
+                }
+
+                for(i=0;i<enemrem.length;i++)
+                    scene.remove(enemrem[i]);
+
+                for(i=0;i<enemrem.length;i++){
+                    for(j=0;j<enemy.length;j++){
+                        if(enemrem[i]==enemy[j])
+                        {
+                            let tmm=enemy[j];
+                            enemy[j]=enemy[enemy.length-1];
+                            enemy[enemy.length-1]=tmm;
+                            enemy.pop();
+                        }
+                    }
+                }
+                    
+                enemrem=[];
+
+
+                for(i=0;i<stars.length;i++){
+                    if((hero.position.x-0.5>=stars[i].position.x-0.5 && hero.position.x-0.5<=stars[i].position.x+0.5)||(hero.position.x+0.5>=stars[i].position.x-0.5 && hero.position.x+0.5<=stars[i].position.x+0.5)){
+                        if((hero.position.y-0.5>=stars[i].position.y-0.5 && hero.position.y-0.5<=stars[i].position.y+0.5)||(hero.position.y+0.5>=stars[i].position.y-0.5 && hero.position.y+0.5<=stars[i].position.y+0.5)){
+                            coinrem.push(stars[i]);
+                            coins++;
+                        }
+                    }                        
+                }
+
+                for(i=0;i<coinrem.length;i++)
+                    scene.remove(coinrem[i]);
+
+                for(i=0;i<coinrem.length;i++){
+                    for(j=0;j<stars.length;j++){
+                        if(coinrem[i]==stars[j])
+                        {
+                            let tmm=stars[j];
+                            stars[j]=stars[stars.length-1];
+                            stars[stars.length-1]=tmm;
+                            stars.pop();
+                        }
+                    }
+                }
+
+                for(i=0;i<stars.length;i++)
+                    stars[i].rotation.y+=0.1;
+
+                for(i=0;i<bullets.length;i++)
+                    bullets[i].position.set(bullets[i].position.x,bullets[i].position.y+bulletspeed,bullets[i].position.z)
+
+                for(i=0;i<bulletrev.length;i++)
+                    bulletrev[i].position.set(bulletrev[i].position.x,bulletrev[i].position.y-bulletspeed,bulletrev[i].position.z)
+
+
+                
+                
+
+                for(i=0;i<bulletrev.length;i++){
+                    if(bulletrev[i].position.y<=top-Height)
+                        bullrevrem.push(bulletrev[i]);
+                }
+                
+                
+                for(i=0;i<bullets.length;i++){
+
+                    if(bullets[i].position.y>=top+1)
+                        bullrem.push(bullets[i]);
+                }
+                
+                for(i=0;i<bullrem.length;i++)
+                    scene.remove(bullrem[i]);
+
+
+                for(i=0;i<bullrem.length;i++) 
+                    scene.remove(bullrevrem[i]);
+                    
+
+                
+                for(i=0;i<bullrem.length;i++){
+                    for(j=0;j<bullets.length;j++){
+                        if(bullrem[i]==bullets[j])
+                        {
+                            let tmm=bullets[j];
+                            bullets[j]=bullets[bullets.length-1];
+                            bullets[bullets.length-1]=tmm;
+                            bullets.pop();
+                        }
+                    }
+                }
+                for(i=0;i<bullrevrem.length;i++){
+                    for(j=0;j<bulletrev.length;j++){
+                        if(bullrevrem[i]==bulletrev[j])
+                        {
+                            let tmm=bulletrev[j];
+                            bulletrev[j]=bulletrev[bulletrev.length-1];
+                            bulletrev[bulletrev.length-1]=tmm;
+                            bulletrev.pop();
+                        }
+                    }
+                }
+                
+
+                bullrem=[];
+                bullrevrem=[];
+                var bullcur;
+                
+                var bulletdone=new Set;
+                for(j=0;j<enemy.length;j++){
+                    let tog=false;
+                    for(i=0;i<bullets.length;i++){
+                        if(bulletdone.has(i))
+                            continue;
+                        if(enemy[j].position.x-0.5<=bullets[i].position.x && enemy[j].position.x+0.5>=bullets[i].position.x)
+                        {
+                            if(enemy[j].position.y-0.5<=bullets[i].position.y && enemy[j].position.y+0.5>bullets[i].position.y)
+                            {   
+                                tog=true;
+                                bullrem.push(bullets[i]);
+                                bulletdone.add(i);
+                            }
+                        }
+                    }
+                    if(tog)
+                        enemrem.push(enemy[j]);
+                }   
+
+                bullcur=bullrem.length;
+                
+                for(j=0 ;j<bullets.length;j++){
+                    for(i=0;i<bullcur;i++){
+                        
+                        if(bullrem[i]!=bullets[j])
+                        {
+                            if(Math.abs(bullets[j].position.x-bullrem[i].position.x)<=precision)
+                            {
+                                if(parseFloat(bullets[j].position.y.toFixed(4))>=parseFloat((bullrem[i].position.y-1).toFixed(4)) && parseFloat(bullets[j].position.y.toFixed(4))<=parseFloat(bullrem[i].position.y.toFixed(4)))
+                                {
+                                    // console.log(Math.abs(bullets[j].position.x-bullrem[i].position.x)<=precision)
+                                    bullrem.push(bullets[j]);
+                                    // console.log(bullets[j].position.x+" "+bullets[j].position.y+" "+bullrem[i].position.x+" "+bullrem[i].position.y+" YOYO");
+                                    break;
+                                }
+                                
+                            }
+                        }
+                        
+                    }
+                }
+                
+                for(i=0;i<enemrem.length;i++)
+                    scene.remove(enemrem[i]);
+                    
+                for(i=0;i<bullrem.length;i++)
+                    scene.remove(bullrem[i]);
+                
+
+                for(i=0;i<bullrem.length;i++){
+                    for(j=0;j<bullets.length;j++){
+                        if(bullrem[i]==bullets[j])
+                        {
+                            
+                            let tmm=bullets[j];
+                            bullets[j]=bullets[bullets.length-1];
+                            bullets[bullets.length-1]=tmm;
+                            bullets.pop();
+                        }
+                    }
+                }
+                
+                for(i=0;i<enemrem.length;i++){
+                    for(j=0;j<enemy.length;j++){
+                        if(enemrem[i]==enemy[j])
+                        {
+                            let tmm=enemy[j];
+                            enemy[j]=enemy[enemy.length-1];
+                            enemy[enemy.length-1]=tmm;
+                            enemy.pop();
+                        }
+                    }
+                }
+
+
+                
+                for(i=0;i<bulletrev.length;i++){
+                    let tog=false;
+                    if((hero.position.x-0.5<=bulletrev[i].position.x && hero.position.x+0.5>=bulletrev[i].position.x) && (hero.position.y+0.5>=bulletrev[i].position.y && hero.position.y-0.5<=bulletrev[i].position.y))
+                    {
+                        bullrevrem.push(bulletrev[i]);
+                        Life=Math.max(Life-1,0);
+                        
+                        
+                    }
+                }
+                
+                bullcur=bullrevrem.length;
+                for(j=0 ;j<bulletrev.length;j++){
+                    for(i=0;i<bullcur;i++){
+                        if(bullrevrem[i]!=bulletrev[j])
+                        {
+                            if(Math.abs(bulletrev[j].position.x-bullrevrem[i].position.x)<=precision)
+                            {
+                                if(parseFloat(bulletrev[j].position.y.toFixed(4))<=parseFloat((bullrevrem[i].position.y+0.5).toFixed(4)) && parseFloat(bulletrev[j].position.y.toFixed(4))>=parseFloat(bullrevrem[i].position.y.toFixed(4)))
+                                {
+                                    // console.log(Math.abs(bulletrev[j].position.x-bullrevrem[i].position.x)<=precision)
+                                    bullrevrem.push(bulletrev[j]);
+                                    // console.log(bulletrev[j].position.x+" "+bulletrev[j].position.y+" "+bullrevrem[i].position.x+" "+bullrevrem[i].position.y+" YOYO");
+                                    break;
+                                }
+                                
+                            }
+                        }
+                    }
+                }
+
+                for(i=0;i<bullrevrem.length;i++)
+                    scene.remove(bullrevrem[i]);
+                
+                for(i=0;i<bullrevrem.length;i++){
+                    for(j=0;j<bulletrev.length;j++){
+                        if(bullrevrem[i]==bulletrev[j])
+                        {
+                            let tmm=bulletrev[j];
+                            bulletrev[j]=bulletrev[bulletrev.length-1];
+                            bulletrev[bulletrev.length-1]=tmm;
+                            bulletrev.pop();
+                        }
+                    }
+                }
+
+                
+                for(j=0;j<enemy.length;j++){
+                    if(enemy[j].position.y<=top-0.5 && enemy[j].position.y>=top-Height-1 && enemy[j].position.y>hero.position.y){
+                        var geometry=new THREE.BoxGeometry(0.05,0.05,0);
+                        var material =new THREE.MeshBasicMaterial({color: 0xFF0000});
+                        var mesh=new THREE.Mesh(geometry,material);
+                     
+                        mesh.position.set(enemy[j].position.x,enemy[j].position.y-0.5,enemy[j].position.z);
+                        bulletrev.push(mesh);    
+                        scene.add(mesh);
+
+                        
+                    }
+                    if(enemy[j].position.y>=hero.position.y-0.5 && enemy[j].position.y<=top)
+                    {
+                        if(enemy[j].position.x>hero.position.x+0.5)
+                            enemy[j].position.x-=villanspeed;
+                        else if(enemy[j].position.x<hero.position.x-0.5)
+                            enemy[j].position.x+=villanspeed;
+                    }
+                }
+
+
+
+
+                if(bossenemy.position.y<=top)
+                {
+                    if(!battle)
+                        show();
+
+                    if(bossenemy.position.x>hero.position.x+0.5)
+                        bossenemy.position.x-=villanspeed;
+                    else if(bossenemy.position.x<hero.position.x-0.5)
+                        bossenemy.position.x+=villanspeed;
+
+                    var geometry=new THREE.BoxGeometry(0.05,0.05,0);
+                    var material =new THREE.MeshBasicMaterial({color: 0xFF0000});
+                    var mesh=new THREE.Mesh(geometry,material);
+                    var mesh1=new THREE.Mesh(geometry,material);
+                    mesh.position.set(bossenemy.position.x-0.5,bossenemy.position.y-0.5,bossenemy.position.z);
+                    bulletrev.push(mesh);    
+                    scene.add(mesh);
+
+                    mesh1.position.set(bossenemy.position.x+0.5,bossenemy.position.y-0.5,bossenemy.position.z);
+                    bulletrev.push(mesh1);    
+                    scene.add(mesh1);
+
+                    bullrem=[];
+                    for(i=0;i<bullets.length;i++){
+                        let tog=false;
+                        if((bossenemy.position.x-1.5<=bullets[i].position.x && bossenemy.position.x+1.7>=bullets[i].position.x) && (bossenemy.position.y+4.2>=bullets[i].position.y && bossenemy.position.y-4.2<=bullets[i].position.y))
+                        {
+                            bullrem.push(bullets[i]);
+                            bosslife=Math.max(bosslife-1,0);
+                            
+                            
+                        }
+                    }
+
+                    bullcur=bullrem.length;
+                
+                    for(j=0 ;j<bullets.length;j++){
+                        for(i=0;i<bullcur;i++){
+                            
+                            if(bullrem[i]!=bullets[j])
+                            {
+                                if(Math.abs(bullets[j].position.x-bullrem[i].position.x)<=precision)
+                                {
+                                    if(parseFloat(bullets[j].position.y.toFixed(4))>=parseFloat((bullrem[i].position.y-0.5).toFixed(4)) && parseFloat(bullets[j].position.y.toFixed(4))<=parseFloat(bullrem[i].position.y.toFixed(4)))
+                                    {
+                                        bullrem.push(bullets[j]); 
+                                        break;
+                                    }
+                                    
+                                }
+                            }
+                            
+                        }
+                    }
+
+                    for(i=0;i<bullrem.length;i++)
+                    scene.remove(bullrem[i]);
+                
+
+                    for(i=0;i<bullrem.length;i++){
+                        for(j=0;j<bullets.length;j++){
+                            if(bullrem[i]==bullets[j])
+                            {
+                                
+                                let tmm=bullets[j];
+                                bullets[j]=bullets[bullets.length-1];
+                                bullets[bullets.length-1]=tmm;
+                                bullets.pop();
+                            }
+                        }
+                    }
+
+
+                    if((hero.position.x-0.5>=bossenemy.position.x-1.3 && hero.position.x-0.5<=bossenemy.position.x+1.7)||(hero.position.x+1>=bossenemy.position.x-1.3 && hero.position.x+1<=bossenemy.position.x+1.7)){
+                        if((hero.position.y-0.5>=bossenemy.position.y-4.2 && hero.position.y-0.5<=bossenemy.position.y+4.2)||(hero.position.y+0.5>=bossenemy.position.y-4.2 && hero.position.y+0.5<=bossenemy.position.y+4.2)){
+                            Life=0;
+                        }
+                    }                        
+                    
+                }
+
+                if(moveForward)
+                    controls.getObject().position.y+=herospeed;
+                if(moveBackward)
+                    controls.getObject().position.y-=herospeed;
+                if(moveLeft)
+                {
+                    controls.getObject().position.x-=herospeed;
+                    if(bullet)
+                        bullet=false;
+                }
+                if(moveRight)
+                {
+                    controls.getObject().position.x+=herospeed;
+                    if(bullet)
+                        bullet=false;
+                }
+                if(bullet){
+                    var geometry=new THREE.BoxGeometry(0.05,0.05,0);
+
+                    var material =new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+                    var mesh=new THREE.Mesh(geometry,material);
+                    mesh.position.set(hero.position.x,hero.position.y+0.5,hero.position.z);
+                    bullets.push(mesh);
+                    scene.add(mesh);
+
+                   
+                }
+                controls.getObject().position.y=Math.max(controls.getObject().position.y,top-Height+1);
+                controls.getObject().position.y=Math.min(controls.getObject().position.y,top-1);
+                controls.getObject().position.x=Math.max(controls.getObject().position.x,left+0.5);
+                controls.getObject().position.x=Math.min(controls.getObject().position.x,left+Width-1.5);
+
+                HUD.innerHTML = "LIFE:"+Life+" POINTS:"+coins;
+                HUD1.innerHTML="BOSSLIFE:"+bosslife;
+
+
+
+                if(Life==0)
+                    window.location.href = "./loss.html";
+                
+                if(bosslife==0)
+                    window.location.href= "./win.html";
+
+            };
+            var render= function(){
+                renderer.render(scene,camera);
+            };
+            var GameLoop= function(){
+                requestAnimationFrame(GameLoop);
+                update();
+                render();
+            };
+            var boss=function(){
+                loader.load(
+                    './js/space_ship/scene.gltf',
+                            
+                    function ( gltf ) {
+                        
+                        
+                    
+                        
+                        // gltf.scene.scale.y/=100;
+                        gltf.scene.scale.x/=1.4;
+                        gltf.scene.scale.z/=1.5;
+                        gltf.scene.position.y=98+Height;
+                        
+                        gltf.scene.position.z=0;
+                        gltf.scene.position.x=0;
+                        gltf.scene.children[0].children[0].children[0].children[0].children[0].material.metalness=0.2;  
+                        gltf.scene.rotation.x=1.5;
+                        gltf.scene.rotation.y=1.57;
+                        scene.add( gltf.scene);
+                        bossenemy=gltf.scene;
+                        console.log(gltf.scene);
+                        
+                        gltf.animations; // Array<THREE.AnimationClip>
+                        gltf.scene; // THREE.Group
+                        gltf.scenes; // Array<THREE.Group>
+                        gltf.cameras; // Array<THREE.Camera>
+                        gltf.asset; // Object
+                        
+                      
+                        
+
+                    },
+                    // called while loading is progressing
+                    function ( xhr ) {
+
+                        console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+                    },
+                    // called when loading has errors
+                    function ( error ) {
+
+                        console.log( 'An error happened' );
+
+                    }
+                );
+            }
+            var init=function()
+            {  
+                
+                document.body.appendChild(HUD);
+                controls = new THREE.PointerLockControls(hero,document.body);
+
+                   
+
+                
+
+
+                const onKeyDown = function ( event ) {
+
+                    switch ( event.code ) {
+
+                        case 'ArrowUp':
+                        case 'KeyW':
+                            moveForward = true;
+                            break;
+
+                        case 'ArrowLeft':
+                        case 'KeyA':
+                            moveLeft = true;
+                            break;
+
+                        case 'ArrowDown':
+                        case 'KeyS':
+                            moveBackward = true;
+                            break;
+
+                        case 'ArrowRight':
+                        case 'KeyD':
+                            moveRight = true;
+                            break;
+                        case 'KeyE':
+                            bullet =true;
+                            break;
+
+                    }
+
+                };
+
+                const onKeyUp = function ( event ) {
+
+                    switch ( event.code ) {
+
+                        case 'ArrowUp':
+                        case 'KeyW':
+                            moveForward = false;
+                            break;
+
+                        case 'ArrowLeft':
+                        case 'KeyA':
+                            moveLeft = false;
+                            break;
+
+                        case 'ArrowDown':
+                        case 'KeyS':
+                            moveBackward = false;
+                            break;
+                        case 'ArrowRight':
+                        case 'KeyD':
+                            moveRight = false;
+                            break;
+
+                        case 'KeyE':
+                            bullet = false;
+                            break;
+
+                    }
+
+                };
+                
+                document.addEventListener( 'keydown', onKeyDown );
+                document.addEventListener( 'keyup', onKeyUp );
+
+                GameLoop();
+
+            }
+            var rewards=function(){
+                
+                for(i=0;i<20;i++){
+                   
+                    let x=Math.floor(Math.random() * Width)-Width/2+0.25;
+                    let y=10+Math.floor(Math.random()*95); 
+                    
+                    x=Math.floor(x);
+                    if(!enemylane.has(y) && !coinlane.has(y))
+                    {
+                        
+
+                       
+                        loader.load(
+                        './js/coin/scene.gltf',
+                                
+                        function ( gltf ) {
+                            
+                            
+                        
+                            gltf.scene.scale.x/=500;
+                            gltf.scene.scale.y/=500;
+                            gltf.scene.scale.z/=500;
+                            gltf.scene.position.y=y;
+                            gltf.scene.position.z=0;
+                            gltf.scene.position.x=x;
+                            gltf.scene.children[0].children[0].children[0].children[0].children[0].children[0].material.metalness=0;
+                            
+                            // gltf.scene.rotation.y=1;
+
+                            
+                            scene.add( gltf.scene);
+                            stars.push(gltf.scene);
+                            // console.log(gltf.scene);
+                            
+                            gltf.animations; // Array<THREE.AnimationClip>
+                            gltf.scene; // THREE.Group
+                            gltf.scenes; // Array<THREE.Group>
+                            gltf.cameras; // Array<THREE.Camera>
+                            gltf.asset; // Object
+                            
+                            
+                        
+
+                        },
+                        // called while loading is progressing
+                        function ( xhr ) {
+
+                            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+                        },
+                        // called when loading has errors
+                        function ( error ) {
+
+                            console.log( 'An error happened' );
+
+                        }
+                    );
+                                
+
+                        let here={
+                            "xcoor":x,
+                            "ycoor":y
+                        };
+                        occupied.push(here);
+                        coinlane.add(y);
+                        
+                    }
+         
+                    
+                }
+              
+                
+
+            }
+            var villans=function(){
+                                    
+                // enemylane=new Set;
+    
+                for(i=0;i<50;i++){
+                    // let mesh=new THREE.Mesh(geometry,material);
+                    let x=Math.floor(Math.random() * Width)-Width/2+0.25;
+                    let y=10+Math.floor(Math.random()*95); 
+                    
+                    x=Math.floor(x);
+                    if(!enemylane.has(y) && !coinlane.has(y))
+                    {
+                        
+
+                        loader.load(
+                            './js/low/scene.gltf',
+                            
+                            function ( gltf ) {
+                                
+                                
+                            
+                                gltf.scene.scale.x/=20;
+                                gltf.scene.scale.y/=30;
+                                gltf.scene.scale.z/=30;
+                                gltf.scene.position.y=y;
+                                gltf.scene.position.z=0;
+                                gltf.scene.position.x=x;
+                            
+                                gltf.scene.rotation.x=-5;
+                                // gltf.scene.rotation.y=109.95;
+                                
+
+                                
+                                scene.add( gltf.scene);
+                                enemy.push(gltf.scene);
+                            
+                                
+                                gltf.animations; // Array<THREE.AnimationClip>
+                                gltf.scene; // THREE.Group
+                                gltf.scenes; // Array<THREE.Group>
+                                gltf.cameras; // Array<THREE.Camera>
+                                gltf.asset; // Object
+                                
+                                
+                                
+                                // rewards();
+                        
+
+                            },
+                            // called while loading is progressing
+                            function ( xhr ) {
+
+                                console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+                            },
+                            // called when loading has errors
+                            function ( error ) {
+
+                                console.log( 'An error happened' );
+
+                            }
+                        );
+
+                        let here={
+                            "xcoor":x,
+                            "ycoor":y
+                        };
+                        occupied.push(here);
+                        enemylane.add(y);
+                        
+                    }
+         
+                    
+                }
+
+                rewards();
+
+            }
+            var protagonist=function(){
+                
+
+                var listener = new THREE.AudioListener();
+                camera.add( listener );
+
+                // create a global audio source
+                var sound = new THREE.Audio( listener );
+
+                var audioLoader = new THREE.AudioLoader();
+
+                //Load a sound and set it as the Audio object's buffer
+                audioLoader.load( './audio/foggy.mp3', function( buffer ) {
+                    sound.setBuffer( buffer );
+                    sound.setLoop(true);
+                    sound.setVolume(0.5);
+                    
+                    sound.play();
+                },
+                            // onProgress callback
+                            function ( xhr ) {
+                                console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+                            },
+
+                            // onError callback
+                            function ( err ) {
+                                console.log( 'Un error ha ocurrido' );
+                            }
+
+                );
+          
+
+                loader.load(
+                        './js/try/scene.gltf',
+                        
+                        function ( gltf ) {
+                            hero=gltf.scene;
+                          
+                            
+                           
+                            // gltf.scene.children[0].children[0].children[0].children[0].children[0].children[1].material.metalness=0 //new
+                            gltf.scene.scale.x/=150;
+                            gltf.scene.scale.y/=200;
+                            gltf.scene.scale.z/=300;
+                            gltf.scene.position.y=-5;
+                            gltf.scene.position.z=0;
+                            gltf.scene.position.x=0;
+                        
+                            gltf.scene.rotation.x=1.6;
+                            gltf.scene.rotation.y=3.15;
+                                
+                            
+                            scene.add( hero);
+                            // console.log(gltf.scene);
+                            // console.log(hero);
+                            gltf.animations; // Array<THREE.AnimationClip>
+                            gltf.scene; // THREE.Group
+                            gltf.scenes; // Array<THREE.Group>
+                            gltf.cameras; // Array<THREE.Camera>
+                            gltf.asset; // Object
+                            
+                            rewards();
+                            villans();
+                            boss();
+                            init();
+                            
+                        },
+                        // called while loading is progressing
+                        function ( xhr ) {
+
+                            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+
+                        },
+                        // called when loading has errors
+                        function ( error ) {
+
+                            console.log( 'An error happened' );
+
+                        }
+                    );
+
+
+
+
+            };
+            
+            
+            
+            
+            protagonist();
+            // init();
+            // GameLoop();
+        </script>
+    </body>
+</html>
