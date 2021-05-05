@@ -22,4 +22,4 @@ Destroy the Britannika's armada along with the mother ship and collect as many p
 
 
 # LAUNCH:
-Start a local server in the submitted zipped directory and open a browser to run the game.
+Start a local server in the project directory and open the port where local server is hosted in a browser to run the game.
