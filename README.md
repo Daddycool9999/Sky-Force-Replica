@@ -24,4 +24,4 @@ https://iiitaphyd-my.sharepoint.com/:v:/g/personal/shivam_nayak_students_iiit_ac
 ## USE GOOGLE CHROME FOR BEST EXPERIENCE.
 
 
-(Player cannot shoot while moving sideways unlike enemiesto make the game tougher)
+(Player cannot shoot while moving sideways unlike enemies to make the game tougher)
