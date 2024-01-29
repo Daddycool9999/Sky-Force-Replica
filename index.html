@@ -94,6 +94,30 @@
 
             const precision=0.0001;
             var battle=false;
+            var listener = new THREE.AudioListener();
+            camera.add( listener );
+                        // create a global audio source
+            var sound = new THREE.Audio( listener );
+
+            var audioLoader = new THREE.AudioLoader();
+
+            //Load a sound and set it as the Audio object's buffer
+            audioLoader.load( './audio/foggy.mp3', function( buffer ) {
+                sound.setBuffer( buffer );
+                sound.setLoop(true);
+                sound.setVolume(0.5);
+            },
+                        // onProgress callback
+                        function ( xhr ) {
+                            console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
+                        },
+
+                        // onError callback
+                        function ( err ) {
+                            console.log( 'Un error ha ocurrido' );
+                        }
+
+            );
 
             var show=function(){
 
@@ -573,6 +597,10 @@
 
                 const onKeyDown = function ( event ) {
 
+                    if (!sound.isPlaying) {
+                        sound.play();
+                    }
+
                     switch ( event.code ) {
 
                         case 'ArrowUp':
@@ -793,35 +821,6 @@
 
             }
             var protagonist=function(){
-                
-
-                var listener = new THREE.AudioListener();
-                camera.add( listener );
-
-                // create a global audio source
-                var sound = new THREE.Audio( listener );
-
-                var audioLoader = new THREE.AudioLoader();
-
-                //Load a sound and set it as the Audio object's buffer
-                audioLoader.load( './audio/foggy.mp3', function( buffer ) {
-                    sound.setBuffer( buffer );
-                    sound.setLoop(true);
-                    sound.setVolume(0.5);
-                    
-                    sound.play();
-                },
-                            // onProgress callback
-                            function ( xhr ) {
-                                console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-                            },
-
-                            // onError callback
-                            function ( err ) {
-                                console.log( 'Un error ha ocurrido' );
-                            }
-
-                );
           
 
                 loader.load(
